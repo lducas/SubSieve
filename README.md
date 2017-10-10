@@ -8,4 +8,6 @@ To use this SubSieve.py, you must first:
 - be in your fpylll environment (See item 7. of [this howto](https://github.com/fplll/fpylll#getting-started))
 - compile the C++ component using Make
 
+The current makefile is very specific, and should be adjusted to your hardware and platforms. In particular, for OSX, you may refer to this [issue](https://github.com/lducas/SubSieve/issues/1).
+
 To reproduce the benchmarks of the paper, simply run bench.py. Of course, results may differs depending on your hardware, or on the version of fpylll used.
