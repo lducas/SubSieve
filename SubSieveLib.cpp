@@ -115,7 +115,7 @@ public:
             db[ce.i].l = length(db[ce.i].y);
 
             db[ce.i].uid = compute_uid(db[ce.i].x);
-            db[ce.i].c = compress(db[ce.i].y);
+            db[ce.i].c = compress(db[ce.i].yr);
             ce.l = db[ce.i].l;
             ce.c = db[ce.i].c;
             db_uid.insert(db[ce.i].uid);
@@ -158,7 +158,7 @@ public:
 
             normalize(db[ce.i].yr, db[ce.i].y);
             db[ce.i].uid = compute_uid(db[ce.i].x);            
-            db[ce.i].c = compress(db[ce.i].y);
+            db[ce.i].c = compress(db[ce.i].yr);
             ce.l = db[ce.i].l;
             ce.c = db[ce.i].c;
             db_uid.insert(db[ce.i].uid);
@@ -356,7 +356,7 @@ public:
         }
         to_gs(e.y, e.x);
         normalize(e.yr,e.y);
-        e.c = compress(e.y);
+        e.c = compress(e.yr);
         e.l = length(e.y);
         if (e.l < 1e-3) { return false;}
         db_uid.insert(e.uid);
@@ -383,7 +383,7 @@ public:
         }
         to_gs(e.y, e.x);
         normalize(e.yr,e.y);
-        e.c = compress(e.y);
+        e.c = compress(e.yr);
         e.l = length(e.y);
         if (e.l < 1e-3) { return false;}
         if (1.001 * e.l > ce->l) { return false;}
