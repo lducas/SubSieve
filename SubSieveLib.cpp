@@ -63,6 +63,7 @@ public:
     unordered_set<size_t> updated;
     long unsigned int collisions = 0;
     vector<Entry> projectors;
+    int remplace_index;
 
 
     // initialize the siever, loading a sub-GSO of dimension nn-d
@@ -168,7 +169,7 @@ public:
         if (VERBOSE)
         {
             cerr << "After projection";
-            print_db_stats();
+            //print_db_stats();
         }
     }
 
@@ -379,20 +380,30 @@ public:
         if (got != db_uid.end()) 
         {
             collisions++;
+            //cerr << "C";
             return false;
         }
         to_gs(e.y, e.x);
         normalize(e.yr,e.y);
         e.c = compress(e.yr);
         e.l = length(e.y);
-        if (e.l < 1e-3) { return false;}
-        if (1.001 * e.l > ce->l) { return false;}
+        if (e.l < 1e-3) 
+        { 
+            //cerr << "L"; 
+            return false;
+        }
+        if (1.001 * e.l > ce->l) 
+        { 
+            //cerr << "Z";
+            return false;
+        }
         db_uid.erase(db[ce->i].uid);
         db_uid.insert(e.uid);
         db[ce->i] = e;
         ce->l = e.l;
         ce->c = e.c;
         updated.insert(ce - &cdb[0]);
+        //cerr << "P";
         return true;
     }
 
@@ -409,17 +420,16 @@ public:
             for (int j = n2; j < n1; ++j){
                 e.x[j] = (rand() % 5) - 2;
             }
-            
+
             to_gs(e.y, e.x);
             babai(e.y, e.x, 0, n2);
 
             res = insert_in_db(e);
-            
+
         }
         return res;
     }
 
-    // Attempt reduction
     inline bool reduce(CompressedEntry *ce1, CompressedEntry *ce2)
     {
         FT inner = 0.;
@@ -454,47 +464,72 @@ public:
             return remplace_in_db(ce1, new_e);
     }
 
-    // Sieve the current database
-    int sieve_loop()
+/*    // Attempt reduction
+    inline bool reduce(CompressedEntry *ce1, CompressedEntry *ce2)
     {
-        uint64_t cR = 0, cT=0, cF=0;
-        collisions = 0;
+        FT inner = 0.;
+        FT* yr1 = & (db[ce1->i].yr.front());
+        FT* yr2 = & (db[ce2->i].yr.front());
+
+        for (int k = 0; k < n; ++k)
+        {
+            inner += yr1[k] * yr2[k];
+        }
+        FT new_l = 1.001 * (ce1->l + ce2->l - 2 * abs(inner));
+        if (new_l > cdb[remplace_index].l)
+        {
+            return false;
+        }
+        if ((ce1->l < 1e-3) || (ce2->l < 1e-3))
+        {
+            return false;
+        }
+        int sign = inner > 0 ? 1 : -1;
+        Entry new_e;
+        new_e.x.resize(n);
+        new_e.y.resize(n);
+        new_e.yr.resize(n);
+        for (int j = 0; j < n; ++j)
+        {
+            new_e.x[j] = db[ce1->i].x[j] - sign * db[ce2->i].x[j];
+        }
+        if (remplace_in_db(&cdb[remplace_index], new_e))
+        {
+            remplace_index --;
+            return true;
+        }
+        return false;
+    }*/
+
+    // Sieve the current database
+    bool sieve_loop()
+    {
         sort(cdb.begin(), cdb.end(), &compare_CompressedEntry);
-
         size_t S = cdb.size();
-        if (VERBOSE) cerr << "\tV: 2^" << log(S)/log(2);
-
-        while(! updated.empty()){
-            size_t i = *(updated.begin());
-            updated.erase(i);
+        remplace_index = S - 1;
+        //print_db_stats();
+        for (int i = 0; i < S; ++i)
+        {
             CompressedEntry *pce1 = &cdb[i];
             CompressedEntry* fast_cdb = &cdb[0];
             CompressedVector cv = pce1->c;
-            int j = 0;
-            for (; j < S; ++j)
+            for (int j = S-1; j > i; --j)
             {
                 int w = __builtin_popcountl(cv[0] ^ fast_cdb[j].c[0]);
                 w    += __builtin_popcountl(cv[1] ^ fast_cdb[j].c[1]);
                 if (w< XOR_POPCNT_THRESHOLD || w > (128 - XOR_POPCNT_THRESHOLD))
-                //if (true)
                 {
-                    if (i==j) continue;
-                    cF++;
-                    if(reduce(pce1, &fast_cdb[j]))
+                    reduce(pce1, &cdb[j]);
+                    if (remplace_index < S/2) 
                     {
-                        cR++;
-                        if (cv != fast_cdb[i].c) break;
+                        // cerr << "saturated sieve" << endl;
+                        return true;
                     }
                 }
-            }
-            cT += j;
-        }    
-    cerr.precision(4);
-    if (VERBOSE) {
-        cerr << "  \tT: 2^" << log(cT)/log(2) << "  \tF: 2^" << log(cF)/log(2)
-        << "  \tR: 2^" << log(cR)/log(2) << "  \tC: 2^" << log(collisions)/log(2) << "  \t";}
-    sort(cdb.begin(), cdb.end(), &compare_CompressedEntry);
-    if (VERBOSE) print_db_stats();
+            }            
+        }
+        // cerr << "unsaturated sieve" << endl;
+        return false;     
     }
 
     // Decide wether sieving is over
@@ -510,9 +545,12 @@ public:
 
         for (CompressedEntry& ce : cdb)
         {
+            // cerr << ce.l / gh << "\t";
             if (ce.l > 1.3333 * gh) break;
             count++;
         }
+        // cerr << endl;
+        // cerr << count << " >? " << .25 * pow(1.3333, n1/2.) << endl;
         return 2. * count > .5 * pow(1.3333, n1/2.);
     }
 
@@ -521,26 +559,23 @@ public:
     int sieve()
     {
         int n1 = n - 20;
-        long S = pow(1.333, n1/2.) / 4;
+        long S;
         while(true)
         {
+            S = 4 * pow(1.333, n1/2.);
             while(cdb.size() < S)
             {
                 sample_and_insert_in_db(n1);
             }
-            if (VERBOSE) cerr << n1;
             sieve_loop();
             n1 += sieve_over(n1);
             if (n1>n) break;
-
-            S *= pow(2, .1);
-            S += 2;
         }
-        print_detailed_db_stats();
+        // print_detailed_db_stats();
     }
 
     // Print minimal statistic on the database (min, average and max squared length)
-    void print_db_stats()
+    void print_db_stats(int n1)
     {
         if (!VERBOSE) return;        
         if (cdb.size()==0)
@@ -549,16 +584,22 @@ public:
             return;
         }
 
-        // sort(cdb.begin(), cdb.end(), &compare_CompressedEntry);
-        
+        double gh = (1.*n1) / n;
+        for (int i = n1; i < n; ++i)
+        {
+            gh *= pow(r[i], -1. / n1);
+        }
+
+        sort(cdb.begin(), cdb.end(), &compare_CompressedEntry);
+
         FT av = 0;
         for (CompressedEntry& ce : cdb)
         {
             av += ce.l;
         }
-        cerr << " min: " << cdb.begin()->l;
-        cerr << " ave: " << av / cdb.size();
-        cerr << " max: " << cdb.rbegin()->l << endl;
+        cerr << " min: " << cdb.begin()->l / gh;
+        cerr << " ave: " << av / cdb.size() / gh;
+        cerr << " max: " << cdb.rbegin()->l / gh << endl;
     }
 
     // Print detailed statistic on the database (saturation rates for the x*gh for various x)
@@ -578,7 +619,7 @@ public:
         }
         cerr << "Length Stats :" << endl;
         cerr << "Expected ball radius for 2*2^" << log(S)/log(2) << " vectors :" << pow(2 * S, 2./n) << endl;
-        print_db_stats();
+        // print_db_stats();
         cerr.precision(3);
         for (int i = 16; i < 80; i+=2)
         {
