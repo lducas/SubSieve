@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define VERBOSE false
+#define VERBOSE true
 
 // Activating/DeActivating Tricks tricks
 
@@ -82,7 +82,9 @@ public:
             for (int j = 0; j < n; ++j)
             {      
                 mu[i][j] = mu_e[(i+d)*nn + (j+d)];
+                //cerr << mu[i][j] << " ";
             }
+            //cerr << endl;
         }
         for (int i = 0; i < n; ++i)
         {
@@ -571,7 +573,7 @@ public:
             n1 += sieve_over(n1);
             if (n1>n) break;
         }
-        // print_detailed_db_stats();
+        print_db_stats(n);
     }
 
     // Print minimal statistic on the database (min, average and max squared length)

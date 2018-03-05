@@ -11,7 +11,7 @@ from fpylll.util import gaussian_heuristic
 from middleware import SubSieveLib
 
 
-for n in range(40, 90, 2):
+for n in range(60, 90, 2):
 
     A_pre = IntegerMatrix.from_file("svpchallenge/svpchallengedim%dseed0.txt"%n)
     LLL.reduction(A_pre)
@@ -27,4 +27,5 @@ for n in range(40, 90, 2):
     TIME = time() - START
     print (n, TIME)
     del siever
+    exit(1)
 
